@@ -1,0 +1,106 @@
+# // // PDF load karne ka index.js file
+# // import * as dotenv from 'dotenv';
+# // dotenv.config();
+
+# // import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
+# // import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
+# // import { GoogleGenerativeAIEmbeddings } from '@langchain/google-genai';
+# // import { Pinecone } from '@pinecone-database/pinecone';
+# // import { PineconeStore } from '@langchain/pinecone';
+
+
+# // async function indexDocument() {
+    
+# // const PDF_PATH = './dsa.pdf';
+# // const pdfLoader = new PDFLoader(PDF_PATH);
+# // const rawDocs = await pdfLoader.load();
+# // console.log("PDF loaded");
+# // // Chunking karo
+
+# // const textSplitter = new RecursiveCharacterTextSplitter({
+# //     chunkSize: 1000,
+# //     chunkOverlap: 200,
+# //   });
+# // const chunkedDocs = await textSplitter.splitDocuments(rawDocs);
+# // console.log("Chunking Completed");
+
+# // // vector Embedding model
+
+# //  const embeddings = new GoogleGenerativeAIEmbeddings({
+# //     apiKey: process.env.GEMINI_API_KEY,
+# //     model: 'text-embedding-004',
+# //   });
+
+# //   console.log("Embedding model configured")
+
+
+# // //   Database ko bhi configure
+# // //  Initialize Pinecone Client
+
+# // const pinecone = new Pinecone();
+# // const pineconeIndex = pinecone.Index(process.env.PINECONE_INDEX_NAME);
+# //  console.log("Pinecone configured")
+
+# // // langchain (chunking,embedding,database)
+
+# // await PineconeStore.fromDocuments(chunkedDocs, embeddings, {
+# //     pineconeIndex,
+# //     maxConcurrency: 5,
+# // });
+
+# //  console.log("Data Stored succesfully")
+
+
+# // }
+
+# // indexDocument();
+import os
+from dotenv import load_dotenv
+
+from langchain_community.document_loaders import PyPDFLoader
+from langchain_text_splitters import RecursiveCharacterTextSplitter
+
+from langchain_google_genai import GoogleGenerativeAIEmbeddings
+from langchain_pinecone import PineconeVectorStore
+from pinecone import Pinecone
+
+# Load env variables
+load_dotenv()
+
+def index_document():
+    PDF_PATH = "./policy.pdf"   # <-- another PDF (policy)
+
+    # 1️⃣ Load PDF
+    loader = PyPDFLoader(PDF_PATH)
+    raw_docs = loader.load()
+    print("PDF loaded")
+
+    # 2️⃣ Chunking
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200
+    )
+    chunked_docs = text_splitter.split_documents(raw_docs)
+    print("Chunking completed")
+
+    # 3️⃣ Embeddings
+    embeddings = GoogleGenerativeAIEmbeddings(
+        model="models/text-embedding-004",
+        google_api_key=os.getenv("GEMINI_API_KEY")
+    )
+    print("Embedding model configured")
+
+    # 4️⃣ Pinecone setup
+    pc = Pinecone(api_key=os.getenv("PINECONE_API_KEY"))
+    index_name = os.getenv("PINECONE_INDEX_NAME")
+
+    vectorstore = PineconeVectorStore.from_documents(
+        documents=chunked_docs,
+        embedding=embeddings,
+        index_name=index_name
+    )
+
+    print("Data stored successfully")
+
+if __name__ == "__main__":
+    index_document()
